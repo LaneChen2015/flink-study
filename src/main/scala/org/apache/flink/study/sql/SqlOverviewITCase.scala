@@ -179,8 +179,18 @@ class SqlOverviewITCase {
 
   @Test
   def testSelect(): Unit = {
-    val sql = "SELECT c_name, CONCAT(c_name, ' come ', c_desc) as desc  FROM customer_tab"
-    procTimePrint(sql)
+//    val sql = "SELECT c_name, CONCAT(c_name, ' come ', c_desc) as desc  FROM customer_tab"
+//    procTimePrint(sql)
+
+    val over_window_rowtime_sql = """
+     SELECT itemID, itemType, onSellTime,price,MAX(price)
+      OVER (
+      PARTITION BY itemType
+      ORDER BY rowtime
+      RANGE BETWEEN INTERVAL '2' MINUTE preceding AND CURRENT ROW ) AS maxPrice
+      FROM item_tab
+    """
+    rowTimePrint(over_window_rowtime_sql)
   }
 
 }
@@ -189,7 +199,7 @@ class SqlOverviewITCase {
 final class RetractingSink extends RichSinkFunction[(Boolean, Row)] {
   var retractedResults: ArrayBuffer[String] = mutable.ArrayBuffer.empty[String]
 
-  def invoke(v: (Boolean, Row)) {
+  override def invoke(v: (Boolean, Row)) {
     retractedResults.synchronized {
       val value = v._2.toString
       if (v._1) {
@@ -219,5 +229,5 @@ class EventTimeSourceFunction[T](
     }
   }
 
-  override def cancel(): Unit = ???
+  override def cancel(): Unit = {}
 }
